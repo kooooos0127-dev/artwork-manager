@@ -20,16 +20,26 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
 .btn:hover{background:#f5f5f5}
 .btn-primary{background:#7F77DD;border-color:#7F77DD;color:#fff}
 .btn-primary:hover{background:#534AB7;border-color:#534AB7}
+.btn-sort{background:#fff;border-color:#7F77DD;color:#7F77DD}
+.btn-sort.active{background:#7F77DD;color:#fff}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1rem}
 .stat-card{background:#fff;border:0.5px solid #e5e5e5;border-radius:8px;padding:0.75rem 1rem}
 .stat-card .label{font-size:12px;color:#888;margin-bottom:4px}
 .stat-card .value{font-size:22px;font-weight:500}
+.sort-hint{font-size:12px;color:#7F77DD;background:#EEEDFE;padding:6px 12px;border-radius:8px;margin-bottom:10px;display:none;align-items:center;gap:6px}
+.sort-hint.show{display:flex}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.card{background:#fff;border:0.5px solid #e5e5e5;border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s}
+.card{background:#fff;border:0.5px solid #e5e5e5;border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s,opacity 0.15s}
 .card:hover{border-color:#aaa;box-shadow:0 2px 8px rgba(0,0,0,0.07)}
+.card.sort-mode{cursor:grab;user-select:none}
+.card.sort-mode:active{cursor:grabbing}
+.card.dragging{opacity:0.35;border-color:#7F77DD}
+.card.drag-over{border-color:#7F77DD;border-width:2px;box-shadow:0 0 0 3px rgba(127,119,221,0.2)}
 .card-img{width:100%;aspect-ratio:1;overflow:hidden;background:#f5f5f0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:13px;flex-direction:column;gap:6px;position:relative}
 .card-img img{width:100%;height:100%;object-fit:cover}
 .card-img-count{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.5);color:#fff;font-size:11px;padding:2px 6px;border-radius:10px}
+.sort-handle{position:absolute;top:6px;left:6px;background:rgba(127,119,221,0.85);color:#fff;border-radius:6px;padding:3px 5px;font-size:14px;display:none}
+.sort-mode .sort-handle{display:flex}
 .card-body{padding:10px 12px}
 .card-title{font-size:14px;font-weight:500;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-sub{font-size:12px;color:#888;margin-bottom:6px}
@@ -82,7 +92,10 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
 <body>
 <header>
   <h1><i class="ti ti-palette" style="font-size:18px;vertical-align:-2px;margin-right:6px;color:#7F77DD"></i>作品管理</h1>
-  <button class="btn btn-primary" onclick="openAdd()"><i class="ti ti-plus"></i>作品を追加</button>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-sort" id="sort-btn" onclick="toggleSortMode()"><i class="ti ti-arrows-move"></i>並び替え</button>
+    <button class="btn btn-primary" onclick="openAdd()"><i class="ti ti-plus"></i>作品を追加</button>
+  </div>
 </header>
 <main>
   <div class="toolbar">
@@ -102,6 +115,7 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
     </select>
   </div>
   <div class="stats" id="stats"></div>
+  <div class="sort-hint" id="sort-hint"><i class="ti ti-drag-drop" style="font-size:15px"></i>カードをドラッグして順番を変えられます。もう一度ボタンを押すと完了。</div>
   <div id="grid" class="grid"><div class="loading">読み込み中...</div></div>
 </main>
 
@@ -175,7 +189,7 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
 <script>
 // ── IndexedDB ──────────────────────────────────
 const DB_NAME='artwork_db';
-const DB_VER=1;
+const DB_VER=2;
 let db=null;
 
 function openDB(){
@@ -185,12 +199,12 @@ function openDB(){
       const d=e.target.result;
       if(!d.objectStoreNames.contains('items'))d.createObjectStore('items',{keyPath:'id'});
       if(!d.objectStoreNames.contains('images'))d.createObjectStore('images',{keyPath:'id',autoIncrement:true});
+      if(!d.objectStoreNames.contains('meta'))d.createObjectStore('meta',{keyPath:'key'});
     };
     req.onsuccess=e=>{db=e.target.result;res(db);};
     req.onerror=e=>rej(e);
   });
 }
-
 function dbGetAll(store){
   return new Promise((res,rej)=>{
     const tx=db.transaction(store,'readonly');
@@ -199,7 +213,6 @@ function dbGetAll(store){
     req.onerror=e=>rej(e);
   });
 }
-
 function dbPut(store,obj){
   return new Promise((res,rej)=>{
     const tx=db.transaction(store,'readwrite');
@@ -208,7 +221,6 @@ function dbPut(store,obj){
     req.onerror=e=>rej(e);
   });
 }
-
 function dbDelete(store,key){
   return new Promise((res,rej)=>{
     const tx=db.transaction(store,'readwrite');
@@ -217,22 +229,30 @@ function dbDelete(store,key){
     req.onerror=e=>rej(e);
   });
 }
-
+function dbGet(store,key){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readonly');
+    const req=tx.objectStore(store).get(key);
+    req.onsuccess=()=>res(req.result);
+    req.onerror=e=>rej(e);
+  });
+}
 function dbGetByIndex(store,index,val){
   return new Promise((res,rej)=>{
     const tx=db.transaction(store,'readonly');
-    const s=tx.objectStore(store);
-    // itemIdインデックスがなければgetAllでフィルタ
-    const req=s.getAll();
+    const req=tx.objectStore(store).getAll();
     req.onsuccess=()=>res(req.result.filter(r=>r[index]===val));
     req.onerror=e=>rej(e);
   });
 }
 
 // ── State ──────────────────────────────────────
-let items=[];      // メタデータ一覧（画像dataなし）
+let items=[];
+let itemOrder=[];   // id の配列で表示順を管理
+let sortMode=false;
+let dragSrcId=null;
 let editId=null;
-let editImgs=[];   // [{id?(既存), data:base64, itemId}]
+let editImgs=[];
 let lbImgs=[];
 let lbIdx=0;
 
@@ -240,7 +260,20 @@ let lbIdx=0;
 async function init(){
   await openDB();
   items=await dbGetAll('items');
+  const orderRec=await dbGet('meta','itemOrder');
+  if(orderRec){
+    // DBにある順序を使い、新規追加分は末尾に追加
+    const known=new Set(orderRec.value);
+    const allIds=items.map(i=>i.id);
+    itemOrder=[...orderRec.value.filter(id=>allIds.includes(id)),...allIds.filter(id=>!known.has(id))];
+  } else {
+    itemOrder=items.map(i=>i.id);
+  }
   render();
+}
+
+async function saveOrder(){
+  await dbPut('meta',{key:'itemOrder',value:itemOrder});
 }
 
 // ── Render ─────────────────────────────────────
@@ -258,11 +291,14 @@ function renderStats(){
     <div class="stat-card"><div class="label">在庫評価額</div><div class="value">¥${val.toLocaleString()}</div></div>`;
 }
 
-function filtered(){
+function getFilteredOrdered(){
   const q=document.getElementById('search').value.toLowerCase();
   const st=document.getElementById('filter-status').value;
   const pl=document.getElementById('filter-platform').value;
-  return items.filter(i=>{
+  // itemOrderの順でitemsを並べる
+  const map=new Map(items.map(i=>[i.id,i]));
+  const ordered=itemOrder.map(id=>map.get(id)).filter(Boolean);
+  return ordered.filter(i=>{
     if(q&&!i.title.toLowerCase().includes(q))return false;
     if(st&&i.status!==st)return false;
     if(pl&&i.platform!==pl)return false;
@@ -271,7 +307,7 @@ function filtered(){
 }
 
 function renderGrid(){
-  const list=filtered();
+  const list=getFilteredOrdered();
   const g=document.getElementById('grid');
   if(!list.length){
     g.innerHTML='<div class="empty"><i class="ti ti-mood-empty" style="font-size:32px;display:block;margin-bottom:8px"></i>作品がありません<br>「作品を追加」から登録してください</div>';
@@ -282,9 +318,20 @@ function renderGrid(){
     const posts=[item.lp&&'LP',item.insta&&'Insta',item.shop&&'掲載'].filter(Boolean);
     const count=item.imgCount||0;
     const countTag=count>1?`<span class="card-img-count"><i class="ti ti-photo" style="font-size:10px"></i> ${count}</span>`:'';
-    const thumbId='thumb-'+item.id;
-    return `<div class="card" onclick="openDetail(${item.id})">
-      <div class="card-img" id="${thumbId}"><i class="ti ti-photo" style="font-size:28px"></i><span>${count?'読込中...':'画像なし'}</span>${countTag}</div>
+    const sortClass=sortMode?'sort-mode':'';
+    const draggable=sortMode?'draggable="true"':'';
+    return `<div class="card ${sortClass}" id="card-${item.id}" data-id="${item.id}" ${draggable}
+      onclick="cardClick(event,${item.id})"
+      ondragstart="dragStart(event,${item.id})"
+      ondragover="dragOver(event,${item.id})"
+      ondragend="dragEnd(event)"
+      ondrop="drop(event,${item.id})">
+      <div class="card-img" id="thumb-${item.id}">
+        <i class="ti ti-photo" style="font-size:28px"></i>
+        <span>${count?'読込中...':'画像なし'}</span>
+        ${countTag}
+        <span class="sort-handle"><i class="ti ti-grip-vertical"></i></span>
+      </div>
       <div class="card-body">
         <div class="card-title">${item.title}</div>
         <div class="card-sub">${item.date||''}${item.size?' · '+item.size:''}</div>
@@ -296,12 +343,7 @@ function renderGrid(){
         <div class="card-price">${item.price?'¥'+Number(item.price).toLocaleString():'価格未設定'}</div>
       </div></div>`;
   }).join('');
-  // サムネイル非同期読み込み
-  list.forEach(item=>{
-    if(item.firstImgId){
-      loadThumb(item.id,item.firstImgId);
-    }
-  });
+  list.forEach(item=>{if(item.firstImgId)loadThumb(item.id,item.firstImgId);});
 }
 
 async function loadThumb(itemId,imgId){
@@ -311,7 +353,13 @@ async function loadThumb(itemId,imgId){
     req.onsuccess=()=>{
       if(!req.result)return;
       const el=document.getElementById('thumb-'+itemId);
-      if(el)el.innerHTML=`<img src="${req.result.data}" alt="">`;
+      if(el){
+        const count=el.querySelector('.card-img-count');
+        const handle=el.querySelector('.sort-handle');
+        el.innerHTML=`<img src="${req.result.data}" alt="">`;
+        if(count)el.appendChild(count);
+        if(handle)el.appendChild(handle);
+      }
     };
   }catch(e){}
 }
@@ -319,6 +367,103 @@ async function loadThumb(itemId,imgId){
 document.getElementById('search').addEventListener('input',renderGrid);
 document.getElementById('filter-status').addEventListener('change',renderGrid);
 document.getElementById('filter-platform').addEventListener('change',renderGrid);
+
+// ── 並び替えモード ─────────────────────────────
+function toggleSortMode(){
+  sortMode=!sortMode;
+  const btn=document.getElementById('sort-btn');
+  const hint=document.getElementById('sort-hint');
+  if(sortMode){
+    btn.classList.add('active');
+    btn.innerHTML='<i class="ti ti-check"></i>並び替え完了';
+    hint.classList.add('show');
+  } else {
+    btn.classList.remove('active');
+    btn.innerHTML='<i class="ti ti-arrows-move"></i>並び替え';
+    hint.classList.remove('show');
+    saveOrder();
+  }
+  renderGrid();
+}
+
+function cardClick(e,id){
+  if(sortMode)return;
+  openDetail(id);
+}
+
+// ── ドラッグ&ドロップ ──────────────────────────
+function dragStart(e,id){
+  if(!sortMode)return;
+  dragSrcId=id;
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{
+    const el=document.getElementById('card-'+id);
+    if(el)el.classList.add('dragging');
+  },0);
+}
+function dragOver(e,id){
+  if(!sortMode||dragSrcId===id)return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('drag-over'));
+  const el=document.getElementById('card-'+id);
+  if(el)el.classList.add('drag-over');
+}
+function dragEnd(e){
+  document.querySelectorAll('.card').forEach(c=>{c.classList.remove('dragging');c.classList.remove('drag-over');});
+}
+function drop(e,targetId){
+  e.preventDefault();
+  if(!sortMode||dragSrcId===targetId)return;
+  const from=itemOrder.indexOf(dragSrcId);
+  const to=itemOrder.indexOf(targetId);
+  if(from<0||to<0)return;
+  itemOrder.splice(from,1);
+  itemOrder.splice(to,0,dragSrcId);
+  dragSrcId=null;
+  renderGrid();
+}
+
+// タッチ対応（スマホ）
+let touchDragId=null;
+let touchClone=null;
+document.addEventListener('touchstart',e=>{
+  if(!sortMode)return;
+  const card=e.target.closest('.card');
+  if(!card)return;
+  touchDragId=parseInt(card.dataset.id);
+  const rect=card.getBoundingClientRect();
+  touchClone=card.cloneNode(true);
+  touchClone.style.cssText=`position:fixed;top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;opacity:0.7;pointer-events:none;z-index:999;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.2)`;
+  document.body.appendChild(touchClone);
+  card.style.opacity='0.3';
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if(!sortMode||!touchClone)return;
+  const t=e.touches[0];
+  touchClone.style.top=(t.clientY-60)+'px';
+  touchClone.style.left=(t.clientX-60)+'px';
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('drag-over'));
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  const card=el?.closest('.card');
+  if(card&&parseInt(card.dataset.id)!==touchDragId)card.classList.add('drag-over');
+},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(!sortMode||!touchClone)return;
+  const t=e.changedTouches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  const card=el?.closest('.card');
+  const targetId=card?parseInt(card.dataset.id):null;
+  if(targetId&&targetId!==touchDragId){
+    const from=itemOrder.indexOf(touchDragId);
+    const to=itemOrder.indexOf(targetId);
+    if(from>=0&&to>=0){itemOrder.splice(from,1);itemOrder.splice(to,0,touchDragId);}
+  }
+  touchClone.remove();touchClone=null;
+  document.querySelectorAll('.card').forEach(c=>{c.style.opacity='';c.classList.remove('drag-over');});
+  touchDragId=null;
+  renderGrid();
+});
 
 // ── 画像グリッド描画 ────────────────────────────
 function renderImgGrid(){
@@ -330,28 +475,19 @@ function renderImgGrid(){
       <button class="img-thumb-del" onclick="removeImg(${i})"><i class="ti ti-x" style="font-size:11px"></i></button>
     </div>`).join('');
 }
-
 function handleImgs(e){
   const files=Array.from(e.target.files);
   let done=0;
   files.forEach(file=>{
     const reader=new FileReader();
-    reader.onload=ev=>{
-      editImgs.push({data:ev.target.result,isNew:true});
-      done++;
-      if(done===files.length)renderImgGrid();
-    };
+    reader.onload=ev=>{editImgs.push({data:ev.target.result,isNew:true});done++;if(done===files.length)renderImgGrid();};
     reader.readAsDataURL(file);
   });
   e.target.value='';
 }
+function removeImg(idx){editImgs.splice(idx,1);renderImgGrid();}
 
-function removeImg(idx){
-  editImgs.splice(idx,1);
-  renderImgGrid();
-}
-
-// ── モーダル open/close ────────────────────────
+// ── モーダル ────────────────────────────────────
 function openAdd(){
   editId=null;editImgs=[];
   document.getElementById('modal-title').textContent='作品を追加';
@@ -359,11 +495,9 @@ function openAdd(){
   resetForm();renderImgGrid();
   document.getElementById('modal-bg').classList.add('open');
 }
-
 async function openDetail(id){
   const item=items.find(i=>i.id===id);if(!item)return;
   editId=id;
-  // 画像をDBから読み込む
   const allImgs=await dbGetByIndex('images','itemId',id);
   allImgs.sort((a,b)=>(a.order||0)-(b.order||0));
   editImgs=allImgs.map(img=>({id:img.id,data:img.data,isNew:false}));
@@ -383,7 +517,6 @@ async function openDetail(id){
   renderImgGrid();
   document.getElementById('modal-bg').classList.add('open');
 }
-
 function resetForm(){
   ['f-title','f-date','f-desc','f-price','f-size'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-stock').value=1;
@@ -393,82 +526,47 @@ function resetForm(){
   document.getElementById('c-insta').checked=false;
   document.getElementById('c-shop').checked=false;
 }
-
 async function saveItem(){
   const title=document.getElementById('f-title').value.trim();
   if(!title){alert('タイトルを入力してください');return;}
   const btn=document.getElementById('save-btn');
   btn.disabled=true;btn.textContent='保存中...';
-
   const id=editId||Date.now();
-
-  // 既存画像を一旦全削除してから保存し直す（順序管理を簡潔に）
   if(editId){
     const oldImgs=await dbGetByIndex('images','itemId',id);
     for(const img of oldImgs)await dbDelete('images',img.id);
   }
-
-  // 画像を保存
   for(let i=0;i<editImgs.length;i++){
     await dbPut('images',{data:editImgs[i].data,itemId:id,order:i});
   }
-
-  const meta={
-    id,
-    title,
-    date:document.getElementById('f-date').value,
-    desc:document.getElementById('f-desc').value,
-    price:Number(document.getElementById('f-price').value)||0,
-    stock:Number(document.getElementById('f-stock').value)||0,
-    size:document.getElementById('f-size').value,
-    status:document.getElementById('f-status').value,
-    platform:document.getElementById('f-platform').value,
-    lp:document.getElementById('c-lp').checked,
-    insta:document.getElementById('c-insta').checked,
-    shop:document.getElementById('c-shop').checked,
-    imgCount:editImgs.length,
-    firstImgId:null
-  };
-
-  // firstImgIdを取得
+  const meta={id,title,date:document.getElementById('f-date').value,desc:document.getElementById('f-desc').value,price:Number(document.getElementById('f-price').value)||0,stock:Number(document.getElementById('f-stock').value)||0,size:document.getElementById('f-size').value,status:document.getElementById('f-status').value,platform:document.getElementById('f-platform').value,lp:document.getElementById('c-lp').checked,insta:document.getElementById('c-insta').checked,shop:document.getElementById('c-shop').checked,imgCount:editImgs.length,firstImgId:null};
   if(editImgs.length>0){
     const saved=await dbGetByIndex('images','itemId',id);
     saved.sort((a,b)=>(a.order||0)-(b.order||0));
     meta.firstImgId=saved[0]?.id||null;
   }
-
   await dbPut('items',meta);
   if(editId){const idx=items.findIndex(i=>i.id===id);items[idx]=meta;}
-  else{items.push(meta);}
-
+  else{items.push(meta);itemOrder.push(id);await saveOrder();}
   btn.disabled=false;btn.textContent='保存';
   closeModal();render();
 }
-
 async function deleteItem(){
   if(!confirm('この作品を削除しますか？'))return;
   const oldImgs=await dbGetByIndex('images','itemId',editId);
   for(const img of oldImgs)await dbDelete('images',img.id);
   await dbDelete('items',editId);
   items=items.filter(i=>i.id!==editId);
+  itemOrder=itemOrder.filter(id=>id!==editId);
+  await saveOrder();
   closeModal();render();
 }
-
 function closeModal(){document.getElementById('modal-bg').classList.remove('open');}
 function closeModalBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
 
 // ── ライトボックス ─────────────────────────────
-function openLbEdit(idx){
-  lbImgs=editImgs.map(i=>i.data);
-  lbIdx=idx;updateLb();
-  document.getElementById('lb-bg').classList.add('open');
-}
-function updateLb(){
-  document.getElementById('lb-img').src=lbImgs[lbIdx];
-  document.getElementById('lb-counter').textContent=`${lbIdx+1} / ${lbImgs.length}`;
-  document.getElementById('lb-prev').style.display=lbImgs.length>1?'flex':'none';
-  document.getElementById('lb-next').style.display=lbImgs.length>1?'flex':'none';
-}
+function openLbEdit(idx){lbImgs=editImgs.map(i=>i.data);lbIdx=idx;updateLb();document.getElementById('lb-bg').classList.add('open');}
+function updateLb(){document.getElementById('lb-img').src=lbImgs[lbIdx];document.getElementById('lb-counter').textContent=`${lbIdx+1} / ${lbImgs.length}`;document.getElementById('lb-prev').style.display=lbImgs.length>1?'flex':'none';document.getElementById('lb-next').style.display=lbImgs.length>1?'flex':'none';}
 function lbMove(dir){lbIdx=(lbIdx+dir+lbImgs.length)%lbImgs.length;updateLb();}
 function closeLb(){document.getElementById('lb-bg').classList.remove('open');}
 function closeLbBg(e){if(e.target===document.getElementById('lb-bg'))closeLb();}
