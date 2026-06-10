@@ -58,30 +58,24 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
 .empty{text-align:center;padding:3rem 1rem;color:#aaa;font-size:14px}
 .delete-btn{color:#A32D2D;border-color:#A32D2D}
 .delete-btn:hover{background:#FCEBEB}
-
-/* 複数画像エリア */
 .img-section{margin-bottom:10px}
 .img-section-label{font-size:12px;color:#666;margin-bottom:6px}
-.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:8px}
+.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:8px}
 .img-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#f5f5f0;border:0.5px solid #e5e5e5}
-.img-thumb img{width:100%;height:100%;object-fit:cover}
-.img-thumb-del{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1}
-.img-thumb-del:hover{background:rgba(163,45,45,0.85)}
-.img-thumb-main{position:absolute;bottom:4px;left:4px;font-size:10px;background:rgba(127,119,221,0.9);color:#fff;padding:1px 5px;border-radius:6px}
-.img-add-btn{aspect-ratio:1;border:1px dashed #ccc;border-radius:8px;background:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#aaa;font-size:12px;min-height:80px}
+.img-thumb img{width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.img-thumb-del{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px}
+.img-thumb-del:hover{background:rgba(163,45,45,0.9)}
+.img-thumb-main{position:absolute;bottom:3px;left:3px;font-size:10px;background:rgba(127,119,221,0.9);color:#fff;padding:1px 5px;border-radius:6px}
+.img-add-btn{width:100%;height:40px;border:1px dashed #ccc;border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;color:#aaa;font-size:13px}
 .img-add-btn:hover{border-color:#7F77DD;color:#7F77DD}
-.img-add-input{display:none}
-
-/* ライトボックス */
-.lb-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center}
+.lb-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:200;align-items:center;justify-content:center}
 .lb-bg.open{display:flex}
 .lb-img{max-width:90vw;max-height:85vh;object-fit:contain;border-radius:8px}
-.lb-close{position:fixed;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;background:none;border:none;line-height:1}
-.lb-prev,.lb-next{position:fixed;top:50%;transform:translateY(-50%);color:#fff;font-size:32px;cursor:pointer;background:rgba(0,0,0,0.3);border:none;padding:12px 8px;border-radius:8px}
-.lb-prev{left:12px}
-.lb-next{right:12px}
-.lb-counter{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;background:rgba(0,0,0,0.4);padding:4px 12px;border-radius:12px}
-
+.lb-close{position:fixed;top:14px;right:18px;color:#fff;font-size:26px;cursor:pointer;background:none;border:none}
+.lb-prev,.lb-next{position:fixed;top:50%;transform:translateY(-50%);color:#fff;font-size:28px;cursor:pointer;background:rgba(0,0,0,0.35);border:none;padding:10px 7px;border-radius:8px}
+.lb-prev{left:10px}.lb-next{right:10px}
+.lb-counter{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;background:rgba(0,0,0,0.4);padding:3px 12px;border-radius:12px}
+.loading{text-align:center;padding:3rem;color:#aaa;font-size:14px}
 @media(max-width:480px){.form-row{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -108,57 +102,34 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
     </select>
   </div>
   <div class="stats" id="stats"></div>
-  <div class="grid" id="grid"></div>
+  <div id="grid" class="grid"><div class="loading">読み込み中...</div></div>
 </main>
 
-<!-- 編集モーダル -->
 <div class="modal-bg" id="modal-bg" onclick="closeModalBg(event)">
   <div class="modal">
     <h2 id="modal-title">作品を追加</h2>
-
-    <!-- 複数画像 -->
     <div class="img-section">
       <div class="img-section-label">作品画像（複数枚OK）</div>
       <div class="img-grid" id="img-grid"></div>
-      <input type="file" accept="image/*" multiple id="img-input" class="img-add-input" onchange="handleImgs(event)">
-      <button class="img-add-btn" onclick="document.getElementById('img-input').click()" type="button" style="width:100%;aspect-ratio:auto;height:44px;flex-direction:row;gap:6px">
-        <i class="ti ti-photo-plus" style="font-size:18px"></i>画像を追加
+      <input type="file" accept="image/*" multiple id="img-input" style="display:none" onchange="handleImgs(event)">
+      <button class="img-add-btn" onclick="document.getElementById('img-input').click()" type="button">
+        <i class="ti ti-photo-plus" style="font-size:16px"></i>画像を追加
       </button>
     </div>
-
     <div class="form-row">
-      <div class="form-group">
-        <label>タイトル *</label>
-        <input type="text" id="f-title" placeholder="作品タイトル">
-      </div>
-      <div class="form-group">
-        <label>制作日</label>
-        <input type="date" id="f-date">
-      </div>
+      <div class="form-group"><label>タイトル *</label><input type="text" id="f-title" placeholder="作品タイトル"></div>
+      <div class="form-group"><label>制作日</label><input type="date" id="f-date"></div>
     </div>
     <div class="form-row full">
-      <div class="form-group">
-        <label>説明・メモ</label>
-        <textarea id="f-desc" placeholder="素材、制作背景など"></textarea>
-      </div>
+      <div class="form-group"><label>説明・メモ</label><textarea id="f-desc" placeholder="素材、制作背景など"></textarea></div>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label>価格 (円)</label>
-        <input type="number" id="f-price" placeholder="3000">
-      </div>
-      <div class="form-group">
-        <label>在庫数</label>
-        <input type="number" id="f-stock" placeholder="1" value="1">
-      </div>
+      <div class="form-group"><label>価格 (円)</label><input type="number" id="f-price" placeholder="3000"></div>
+      <div class="form-group"><label>在庫数</label><input type="number" id="f-stock" value="1"></div>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label>サイズ</label>
-        <input type="text" id="f-size" placeholder="A4 / 210×297mm">
-      </div>
-      <div class="form-group">
-        <label>販売状況</label>
+      <div class="form-group"><label>サイズ</label><input type="text" id="f-size" placeholder="A4 / 210×297mm"></div>
+      <div class="form-group"><label>販売状況</label>
         <select id="f-status">
           <option value="在庫あり">在庫あり</option>
           <option value="売り済み">売り済み</option>
@@ -167,8 +138,7 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
       </div>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label>販売先</label>
+      <div class="form-group"><label>販売先</label>
         <select id="f-platform">
           <option value="未定">未定</option>
           <option value="BASE">BASE</option>
@@ -178,8 +148,7 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
       </div>
     </div>
     <div class="form-row full">
-      <div class="form-group">
-        <label>投稿状況</label>
+      <div class="form-group"><label>投稿状況</label>
         <div class="check-group">
           <label class="check-item"><input type="checkbox" id="c-lp"> LP掲載済み</label>
           <label class="check-item"><input type="checkbox" id="c-insta"> Instagram投稿済み</label>
@@ -190,14 +159,13 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
     <div class="modal-footer">
       <button class="btn delete-btn" id="delete-btn" style="display:none;margin-right:auto" onclick="deleteItem()"><i class="ti ti-trash"></i>削除</button>
       <button class="btn" onclick="closeModal()">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveItem()">保存</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveItem()">保存</button>
     </div>
   </div>
 </div>
 
-<!-- ライトボックス -->
-<div class="lb-bg" id="lb-bg" onclick="closeLb(event)">
-  <button class="lb-close" onclick="closeLbBtn()"><i class="ti ti-x"></i></button>
+<div class="lb-bg" id="lb-bg" onclick="closeLbBg(event)">
+  <button class="lb-close" onclick="closeLb()"><i class="ti ti-x"></i></button>
   <button class="lb-prev" id="lb-prev" onclick="lbMove(-1)"><i class="ti ti-chevron-left"></i></button>
   <img class="lb-img" id="lb-img" src="" alt="">
   <button class="lb-next" id="lb-next" onclick="lbMove(1)"><i class="ti ti-chevron-right"></i></button>
@@ -205,18 +173,77 @@ main{max-width:960px;margin:0 auto;padding:1.5rem}
 </div>
 
 <script>
-const STORE_KEY='artwork_items_v4';
-let items=[];
+// ── IndexedDB ──────────────────────────────────
+const DB_NAME='artwork_db';
+const DB_VER=1;
+let db=null;
+
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('items'))d.createObjectStore('items',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('images'))d.createObjectStore('images',{keyPath:'id',autoIncrement:true});
+    };
+    req.onsuccess=e=>{db=e.target.result;res(db);};
+    req.onerror=e=>rej(e);
+  });
+}
+
+function dbGetAll(store){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readonly');
+    const req=tx.objectStore(store).getAll();
+    req.onsuccess=()=>res(req.result);
+    req.onerror=e=>rej(e);
+  });
+}
+
+function dbPut(store,obj){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readwrite');
+    const req=tx.objectStore(store).put(obj);
+    req.onsuccess=()=>res(req.result);
+    req.onerror=e=>rej(e);
+  });
+}
+
+function dbDelete(store,key){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readwrite');
+    const req=tx.objectStore(store).delete(key);
+    req.onsuccess=()=>res();
+    req.onerror=e=>rej(e);
+  });
+}
+
+function dbGetByIndex(store,index,val){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readonly');
+    const s=tx.objectStore(store);
+    // itemIdインデックスがなければgetAllでフィルタ
+    const req=s.getAll();
+    req.onsuccess=()=>res(req.result.filter(r=>r[index]===val));
+    req.onerror=e=>rej(e);
+  });
+}
+
+// ── State ──────────────────────────────────────
+let items=[];      // メタデータ一覧（画像dataなし）
 let editId=null;
-let editImgs=[]; // [{data: base64}]
+let editImgs=[];   // [{id?(既存), data:base64, itemId}]
 let lbImgs=[];
 let lbIdx=0;
 
-function loadItems(){
-  try{const d=localStorage.getItem(STORE_KEY);items=d?JSON.parse(d):[];}catch(e){items=[];}
+// ── Init ───────────────────────────────────────
+async function init(){
+  await openDB();
+  items=await dbGetAll('items');
   render();
 }
-function saveItems(){try{localStorage.setItem(STORE_KEY,JSON.stringify(items));}catch(e){alert('保存に失敗しました（ストレージ容量不足の可能性があります）');}}
+
+// ── Render ─────────────────────────────────────
 function render(){renderStats();renderGrid();}
 
 function renderStats(){
@@ -246,16 +273,18 @@ function filtered(){
 function renderGrid(){
   const list=filtered();
   const g=document.getElementById('grid');
-  if(!list.length){g.innerHTML='<div class="empty"><i class="ti ti-mood-empty" style="font-size:32px;display:block;margin-bottom:8px"></i>作品がありません<br>「作品を追加」から登録してください</div>';return;}
+  if(!list.length){
+    g.innerHTML='<div class="empty"><i class="ti ti-mood-empty" style="font-size:32px;display:block;margin-bottom:8px"></i>作品がありません<br>「作品を追加」から登録してください</div>';
+    return;
+  }
   g.innerHTML=list.map(item=>{
-    const imgs=item.imgs||[];
-    const firstImg=imgs[0]?.data||item.img||null;
-    const imgTag=firstImg?`<img src="${firstImg}" alt="${item.title}">`:`<i class="ti ti-photo" style="font-size:28px"></i><span>画像なし</span>`;
-    const countTag=imgs.length>1?`<span class="card-img-count"><i class="ti ti-photo" style="font-size:10px"></i> ${imgs.length}</span>`:'';
     const sc=item.status==='売り済み'?'badge-sold':item.status==='取り置き'?'badge-hold':'badge-stock';
     const posts=[item.lp&&'LP',item.insta&&'Insta',item.shop&&'掲載'].filter(Boolean);
+    const count=item.imgCount||0;
+    const countTag=count>1?`<span class="card-img-count"><i class="ti ti-photo" style="font-size:10px"></i> ${count}</span>`:'';
+    const thumbId='thumb-'+item.id;
     return `<div class="card" onclick="openDetail(${item.id})">
-      <div class="card-img">${imgTag}${countTag}</div>
+      <div class="card-img" id="${thumbId}"><i class="ti ti-photo" style="font-size:28px"></i><span>${count?'読込中...':'画像なし'}</span>${countTag}</div>
       <div class="card-body">
         <div class="card-title">${item.title}</div>
         <div class="card-sub">${item.date||''}${item.size?' · '+item.size:''}</div>
@@ -267,31 +296,50 @@ function renderGrid(){
         <div class="card-price">${item.price?'¥'+Number(item.price).toLocaleString():'価格未設定'}</div>
       </div></div>`;
   }).join('');
+  // サムネイル非同期読み込み
+  list.forEach(item=>{
+    if(item.firstImgId){
+      loadThumb(item.id,item.firstImgId);
+    }
+  });
+}
+
+async function loadThumb(itemId,imgId){
+  try{
+    const tx=db.transaction('images','readonly');
+    const req=tx.objectStore('images').get(imgId);
+    req.onsuccess=()=>{
+      if(!req.result)return;
+      const el=document.getElementById('thumb-'+itemId);
+      if(el)el.innerHTML=`<img src="${req.result.data}" alt="">`;
+    };
+  }catch(e){}
 }
 
 document.getElementById('search').addEventListener('input',renderGrid);
 document.getElementById('filter-status').addEventListener('change',renderGrid);
 document.getElementById('filter-platform').addEventListener('change',renderGrid);
 
+// ── 画像グリッド描画 ────────────────────────────
 function renderImgGrid(){
   const g=document.getElementById('img-grid');
   g.innerHTML=editImgs.map((img,i)=>`
     <div class="img-thumb">
-      <img src="${img.data}" alt="画像${i+1}" onclick="openLb(editImgs.map(x=>x.data),${i})" style="cursor:zoom-in">
+      <img src="${img.data}" alt="画像${i+1}" onclick="openLbEdit(${i})">
       ${i===0?'<span class="img-thumb-main">メイン</span>':''}
-      <button class="img-thumb-del" onclick="removeImg(${i})" title="削除"><i class="ti ti-x" style="font-size:12px"></i></button>
+      <button class="img-thumb-del" onclick="removeImg(${i})"><i class="ti ti-x" style="font-size:11px"></i></button>
     </div>`).join('');
 }
 
 function handleImgs(e){
   const files=Array.from(e.target.files);
-  let loaded=0;
+  let done=0;
   files.forEach(file=>{
     const reader=new FileReader();
     reader.onload=ev=>{
-      editImgs.push({data:ev.target.result});
-      loaded++;
-      if(loaded===files.length)renderImgGrid();
+      editImgs.push({data:ev.target.result,isNew:true});
+      done++;
+      if(done===files.length)renderImgGrid();
     };
     reader.readAsDataURL(file);
   });
@@ -303,20 +351,22 @@ function removeImg(idx){
   renderImgGrid();
 }
 
+// ── モーダル open/close ────────────────────────
 function openAdd(){
   editId=null;editImgs=[];
   document.getElementById('modal-title').textContent='作品を追加';
   document.getElementById('delete-btn').style.display='none';
-  resetForm();
-  renderImgGrid();
+  resetForm();renderImgGrid();
   document.getElementById('modal-bg').classList.add('open');
 }
 
-function openDetail(id){
+async function openDetail(id){
   const item=items.find(i=>i.id===id);if(!item)return;
   editId=id;
-  // 旧形式(img)→新形式(imgs)変換
-  editImgs=item.imgs?[...item.imgs]:(item.img?[{data:item.img}]:[]);
+  // 画像をDBから読み込む
+  const allImgs=await dbGetByIndex('images','itemId',id);
+  allImgs.sort((a,b)=>(a.order||0)-(b.order||0));
+  editImgs=allImgs.map(img=>({id:img.id,data:img.data,isNew:false}));
   document.getElementById('modal-title').textContent='作品を編集';
   document.getElementById('delete-btn').style.display='inline-flex';
   document.getElementById('f-title').value=item.title||'';
@@ -344,11 +394,29 @@ function resetForm(){
   document.getElementById('c-shop').checked=false;
 }
 
-function saveItem(){
+async function saveItem(){
   const title=document.getElementById('f-title').value.trim();
   if(!title){alert('タイトルを入力してください');return;}
-  const data={
-    title,date:document.getElementById('f-date').value,
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true;btn.textContent='保存中...';
+
+  const id=editId||Date.now();
+
+  // 既存画像を一旦全削除してから保存し直す（順序管理を簡潔に）
+  if(editId){
+    const oldImgs=await dbGetByIndex('images','itemId',id);
+    for(const img of oldImgs)await dbDelete('images',img.id);
+  }
+
+  // 画像を保存
+  for(let i=0;i<editImgs.length;i++){
+    await dbPut('images',{data:editImgs[i].data,itemId:id,order:i});
+  }
+
+  const meta={
+    id,
+    title,
+    date:document.getElementById('f-date').value,
     desc:document.getElementById('f-desc').value,
     price:Number(document.getElementById('f-price').value)||0,
     stock:Number(document.getElementById('f-stock').value)||0,
@@ -358,27 +426,41 @@ function saveItem(){
     lp:document.getElementById('c-lp').checked,
     insta:document.getElementById('c-insta').checked,
     shop:document.getElementById('c-shop').checked,
-    imgs:[...editImgs],
-    img:editImgs[0]?.data||null
+    imgCount:editImgs.length,
+    firstImgId:null
   };
-  if(editId){const idx=items.findIndex(i=>i.id===editId);items[idx]={...items[idx],...data};}
-  else{items.push({id:Date.now(),...data});}
-  saveItems();closeModal();render();
+
+  // firstImgIdを取得
+  if(editImgs.length>0){
+    const saved=await dbGetByIndex('images','itemId',id);
+    saved.sort((a,b)=>(a.order||0)-(b.order||0));
+    meta.firstImgId=saved[0]?.id||null;
+  }
+
+  await dbPut('items',meta);
+  if(editId){const idx=items.findIndex(i=>i.id===id);items[idx]=meta;}
+  else{items.push(meta);}
+
+  btn.disabled=false;btn.textContent='保存';
+  closeModal();render();
 }
 
-function deleteItem(){
+async function deleteItem(){
   if(!confirm('この作品を削除しますか？'))return;
+  const oldImgs=await dbGetByIndex('images','itemId',editId);
+  for(const img of oldImgs)await dbDelete('images',img.id);
+  await dbDelete('items',editId);
   items=items.filter(i=>i.id!==editId);
-  saveItems();closeModal();render();
+  closeModal();render();
 }
 
 function closeModal(){document.getElementById('modal-bg').classList.remove('open');}
 function closeModalBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
 
-// ライトボックス
-function openLb(imgs,idx){
-  lbImgs=imgs;lbIdx=idx;
-  updateLb();
+// ── ライトボックス ─────────────────────────────
+function openLbEdit(idx){
+  lbImgs=editImgs.map(i=>i.data);
+  lbIdx=idx;updateLb();
   document.getElementById('lb-bg').classList.add('open');
 }
 function updateLb(){
@@ -388,10 +470,10 @@ function updateLb(){
   document.getElementById('lb-next').style.display=lbImgs.length>1?'flex':'none';
 }
 function lbMove(dir){lbIdx=(lbIdx+dir+lbImgs.length)%lbImgs.length;updateLb();}
-function closeLb(e){if(e.target===document.getElementById('lb-bg'))document.getElementById('lb-bg').classList.remove('open');}
-function closeLbBtn(){document.getElementById('lb-bg').classList.remove('open');}
+function closeLb(){document.getElementById('lb-bg').classList.remove('open');}
+function closeLbBg(e){if(e.target===document.getElementById('lb-bg'))closeLb();}
 
-loadItems();
+init();
 </script>
 </body>
 </html>
